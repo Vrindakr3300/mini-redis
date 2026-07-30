@@ -1,33 +1,60 @@
+import sys
+import os
+# Add project root to sys.path to avoid collisions with standard library 'cmd'
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
 import socket
 import threading
-import sys
+from pkg.store.db import Database
+from pkg.commands.handler import CommandHandler
+from pkg.resp.parser import BufferReader
+from pkg.resp.types import serialize
 
 # Default Redis port
 PORT = 6379
 HOST = "127.0.0.1"
 
+# Shared database and command handler
+db = Database()
+handler = CommandHandler(db)
+
 def handle_client(client_socket, client_address):
     print(f"[INFO] New connection from {client_address}")
+    reader = BufferReader()
     try:
         while True:
-            # Read data from client (up to 1024 bytes)
             data = client_socket.recv(1024)
             if not data:
                 print(f"[INFO] Client {client_address} disconnected")
                 break
             
-            # For Phase 1, we just echo back what we received
-            print(f"[DEBUG] Received from {client_address}: {data}")
-            client_socket.sendall(data)
+            reader.feed(data)
+            
+            # Parse and execute all complete messages in the buffer
+            while True:
+                try:
+                    command_args = reader.parse_next()
+                    if command_args is None:
+                        break  # Incomplete command, wait for more data
+                    
+                    # Execute the command
+                    result = handler.handle(command_args)
+                    
+                    # Send response
+                    response_bytes = serialize(result)
+                    client_socket.sendall(response_bytes)
+                except Exception as parse_error:
+                    # Write protocol error back to the client
+                    error_bytes = serialize(parse_error)
+                    client_socket.sendall(error_bytes)
+                    
     except Exception as e:
         print(f"[ERROR] Error handling client {client_address}: {e}")
     finally:
         client_socket.close()
 
 def main():
-    # Create a TCP socket
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # Allow address reuse so restarting doesn't result in "Address already in use" errors
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     
     try:
@@ -41,7 +68,6 @@ def main():
     try:
         while True:
             client_socket, client_address = server_socket.accept()
-            # Handle client in a new thread
             client_thread = threading.Thread(
                 target=handle_client,
                 args=(client_socket, client_address),
