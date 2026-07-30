@@ -42,9 +42,21 @@ mini_redis/
 - Python 3.x (No external dependencies required, built entirely with standard libraries!)
 
 ### Running the Server
+
+#### Option A: Running locally with Python
 Start the Mini-Redis server on `localhost:6379`:
 ```bash
 python cmd/server/main.py
+```
+
+#### Option B: Running with Docker
+Build and run the database container:
+```bash
+# Build the Docker image
+docker build -t mini-redis .
+
+# Run the container (maps port 6379 on your machine)
+docker run -p 6379:6379 mini-redis
 ```
 
 ### Connecting to the Server
