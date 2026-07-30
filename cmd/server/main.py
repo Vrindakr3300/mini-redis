@@ -1,7 +1,7 @@
 import sys
 import os
 # Add project root to sys.path to avoid collisions with standard library 'cmd'
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 import socket
 import threading
@@ -10,14 +10,16 @@ from pkg.commands.handler import CommandHandler
 from pkg.resp.parser import BufferReader
 from pkg.resp.types import serialize, RESPError
 from pkg.store.aof import AOFManager
+from pkg.store.pubsub import PubSubManager
 
 # Default Redis port
 PORT = 6379
 HOST = "127.0.0.1"
 
-# Shared database, command handler, and AOF manager
+# Shared database, command handler, AOF manager, and Pub/Sub manager
 db = Database()
-handler = CommandHandler(db)
+pubsub_manager = PubSubManager()
+handler = CommandHandler(db, pubsub_manager)
 aof_manager = AOFManager("appendonly.aof")
 
 def handle_client(client_socket, client_address):
@@ -39,12 +41,13 @@ def handle_client(client_socket, client_address):
                     if command_args is None:
                         break  # Incomplete command, wait for more data
                     
-                    # Execute the command
-                    result = handler.handle(command_args)
+                    # Execute the command (pass client_socket for SUBSCRIBE)
+                    result = handler.handle(command_args, client_socket)
                     
-                    # Send response
-                    response_bytes = serialize(result)
-                    client_socket.sendall(response_bytes)
+                    # Send response if not None (SUBSCRIBE handles its own push replies)
+                    if result is not None:
+                        response_bytes = serialize(result)
+                        client_socket.sendall(response_bytes)
 
                     # Log successful write commands to AOF
                     if not isinstance(result, RESPError):
@@ -59,6 +62,8 @@ def handle_client(client_socket, client_address):
     except Exception as e:
         print(f"[ERROR] Error handling client {client_address}: {e}")
     finally:
+        # Clean up client subscriptions when they disconnect
+        pubsub_manager.unsubscribe_all(client_socket)
         client_socket.close()
 
 def main():

@@ -3,10 +3,11 @@ from pkg.store.db import Database
 
 class CommandHandler:
     """Routes and handles Redis commands."""
-    def __init__(self, db: Database):
+    def __init__(self, db: Database, pubsub=None):
         self.db = db
+        self.pubsub = pubsub
 
-    def handle(self, args: list) -> any:
+    def handle(self, args: list, client_socket=None) -> any:
         """
         Parses command arguments and executes the corresponding database operation.
         Returns the command result to be serialized back to the client.
@@ -45,6 +46,10 @@ class CommandHandler:
             return self._hget(cmd_args)
         elif cmd_name == "HDEL":
             return self._hdel(cmd_args)
+        elif cmd_name == "SUBSCRIBE":
+            return self._subscribe(cmd_args, client_socket)
+        elif cmd_name == "PUBLISH":
+            return self._publish(cmd_args)
         else:
             return RESPError(f"ERR unknown command '{cmd_name}'")
 
@@ -175,3 +180,25 @@ class CommandHandler:
             return self.db.hdel(args[0], args[1:])
         except TypeError as e:
             return RESPError(str(e))
+
+    def _subscribe(self, args: list, client_socket) -> None | RESPError:
+        if not client_socket:
+            return RESPError("ERR SUBSCRIBE can only be called from an active client connection")
+        if len(args) < 1:
+            return RESPError("ERR wrong number of arguments for 'subscribe' command")
+        if not self.pubsub:
+            return RESPError("ERR Pub/Sub manager not initialized")
+        
+        results = self.pubsub.subscribe(client_socket, args)
+        
+        from pkg.resp.types import serialize
+        for channel, count in results:
+            client_socket.sendall(serialize(["subscribe", channel, count]))
+        return None
+
+    def _publish(self, args: list) -> int | RESPError:
+        if len(args) != 2:
+            return RESPError("ERR wrong number of arguments for 'publish' command")
+        if not self.pubsub:
+            return RESPError("ERR Pub/Sub manager not initialized")
+        return self.pubsub.publish(args[0], args[1])
