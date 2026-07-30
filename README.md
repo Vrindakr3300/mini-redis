@@ -10,7 +10,7 @@ This project was built to understand systems programming, networking, custom pro
 - **TCP Socket Server:** Multi-threaded TCP server supporting concurrent connections on the standard Redis port (`6379`).
 - **RESP Protocol Parser:** Full implementation of the **Redis Serialization Protocol** (RESP) parser and serializer. Understands and formats Simple Strings, Errors, Integers, Bulk Strings, Arrays, and Null values.
 - **Thread-Safe Storage:** In-memory store protected by a thread lock (`threading.Lock`) to prevent race conditions during concurrent writes.
-- **Core Commands:** Implements standard commands: `PING`, `SET`, `GET`, `DEL`, `EXISTS`, and `KEYS`.
+- **Core Commands:** Implements standard key-value strings (`PING`, `SET`, `GET`, `DEL`, `EXISTS`, `KEYS`), List structures (`LPUSH`, `RPUSH`, `LPOP`, `RPOP`, `LRANGE`), and Hash structures (`HSET`, `HGET`, `HDEL`).
 - **Key Expiration (TTL):** Supports setting expiration limits (TTL) on keys. Combines **passive deletion** (on-access checks) and **active deletion** (a background cleaner thread checking keys every second).
 - **AOF Durability:** Implements **Append-Only File** (AOF) logging. Write operations are logged to `appendonly.aof` in RESP format and replayed on server boot to fully restore the database state.
 
@@ -72,6 +72,7 @@ Once connected, send commands in standard RESP format, or raw text (inline comma
 PING
 +PONG
 
+# --- Strings ---
 SET name John
 +OK
 
@@ -84,6 +85,37 @@ SET temp_key temp_val EX 5
 
 GET temp_key   (Wait 5 seconds...)
 $-1
+
+# --- Lists ---
+LPUSH mylist val1 val2
+:2
+
+RPUSH mylist val3
+:3
+
+LRANGE mylist 0 -1
+*3
+$4
+val2
+$4
+val1
+$4
+val3
+
+LPOP mylist
+$4
+val2
+
+# --- Hashes ---
+HSET myhash field1 value1 field2 value2
+:2
+
+HGET myhash field1
+$6
+value1
+
+HDEL myhash field1
+:1
 ```
 
 ---
