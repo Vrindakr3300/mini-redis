@@ -10,7 +10,7 @@ This project was built to understand systems programming, networking, custom pro
 - **TCP Socket Server:** Multi-threaded TCP server supporting concurrent connections on the standard Redis port (`6379`).
 - **RESP Protocol Parser:** Full implementation of the **Redis Serialization Protocol** (RESP) parser and serializer. Understands and formats Simple Strings, Errors, Integers, Bulk Strings, Arrays, and Null values.
 - **Thread-Safe Storage:** In-memory store protected by a thread lock (`threading.Lock`) to prevent race conditions during concurrent writes.
-- **Core Commands:** Implements standard key-value strings (`PING`, `SET`, `GET`, `DEL`, `EXISTS`, `KEYS`), List structures (`LPUSH`, `RPUSH`, `LPOP`, `RPOP`, `LRANGE`), and Hash structures (`HSET`, `HGET`, `HDEL`).
+- **Core Commands:** Implements standard key-value strings (`PING`, `SET`, `GET`, `DEL`, `EXISTS`, `KEYS`), List structures (`LPUSH`, `RPUSH`, `LPOP`, `RPOP`, `LRANGE`), Hash structures (`HSET`, `HGET`, `HDEL`), and real-time Pub/Sub messaging (`SUBSCRIBE`, `PUBLISH`).
 - **Key Expiration (TTL):** Supports setting expiration limits (TTL) on keys. Combines **passive deletion** (on-access checks) and **active deletion** (a background cleaner thread checking keys every second).
 - **AOF Durability:** Implements **Append-Only File** (AOF) logging. Write operations are logged to `appendonly.aof` in RESP format and replayed on server boot to fully restore the database state.
 
@@ -116,6 +116,29 @@ value1
 
 HDEL myhash field1
 :1
+
+# --- Pub/Sub ---
+# Subscriber client:
+SUBSCRIBE chat
+*3
+$9
+subscribe
+$4
+chat
+:1
+
+# Publisher client:
+PUBLISH chat hello
+:1
+
+# Subscriber client receives push message:
+*3
+$7
+message
+$4
+chat
+$5
+hello
 ```
 
 ---
