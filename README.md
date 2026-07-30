@@ -157,7 +157,7 @@ sequenceDiagram
 
 ---
 
-## Technical Insights for SDE Interviews
+## Technical Insights 
 - **Custom RESP Parsing:** Instead of string splits, the stream parser reads chunks of bytes from a TCP socket into a buffer, handling partial reads and backtracking safely for nested array structures.
 - **Durability vs Performance:** AOF writes are unbuffered to disk on every command execution to ensure data safety, mirroring the traditional `appendfsync always` policy in Redis.
 - **Two-Way Eviction (TTL):** Eviction runs passively when keys are read to minimize CPU utilization, complemented by a background thread running active scans to clean up keys that are set but never queried again.
