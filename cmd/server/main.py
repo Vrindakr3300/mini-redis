@@ -8,15 +8,17 @@ import threading
 from pkg.store.db import Database
 from pkg.commands.handler import CommandHandler
 from pkg.resp.parser import BufferReader
-from pkg.resp.types import serialize
+from pkg.resp.types import serialize, RESPError
+from pkg.store.aof import AOFManager
 
 # Default Redis port
 PORT = 6379
 HOST = "127.0.0.1"
 
-# Shared database and command handler
+# Shared database, command handler, and AOF manager
 db = Database()
 handler = CommandHandler(db)
+aof_manager = AOFManager("appendonly.aof")
 
 def handle_client(client_socket, client_address):
     print(f"[INFO] New connection from {client_address}")
@@ -43,6 +45,12 @@ def handle_client(client_socket, client_address):
                     # Send response
                     response_bytes = serialize(result)
                     client_socket.sendall(response_bytes)
+
+                    # Log successful write commands to AOF
+                    if not isinstance(result, RESPError):
+                        cmd_name = str(command_args[0]).upper()
+                        if cmd_name in ("SET", "DEL"):
+                            aof_manager.write(command_args)
                 except Exception as parse_error:
                     # Write protocol error back to the client
                     error_bytes = serialize(parse_error)
@@ -54,6 +62,14 @@ def handle_client(client_socket, client_address):
         client_socket.close()
 
 def main():
+    # Load AOF to restore database state
+    print("[INFO] Replaying AOF file to restore state...")
+    loaded_count = aof_manager.load(handler)
+    print(f"[INFO] Replayed {loaded_count} commands from AOF.")
+    
+    # Open AOF file for logging new writes
+    aof_manager.open()
+
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     
