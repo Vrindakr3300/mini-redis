@@ -2,6 +2,8 @@
 
 A lightweight, high-performance in-memory key-value database clone of Redis, written completely from scratch in Python. 
 
+![Mini-Redis Architecture](architecture.jpg)
+
 This project was built to understand systems programming, networking, custom protocol parsing, thread safety, and database durability.
 
 ---
