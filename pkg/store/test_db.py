@@ -34,5 +34,18 @@ class TestDatabase(unittest.TestCase):
         self.assertIsNone(self.db.get("temp"))
         self.assertFalse(self.db.exists("temp"))
 
+    def test_active_expiration(self):
+        # Set with 0.1 seconds TTL (active cleaner runs every 1 second)
+        self.db.set("temp", "value", ttl_seconds=0.1)
+        self.assertTrue(self.db.exists("temp"))
+        
+        # Wait for the background thread to run (1.2s sleep is enough)
+        time.sleep(1.2)
+        
+        # Access internal state directly to ensure active deletion removed the key
+        with self.db._lock:
+            self.assertNotIn("temp", self.db._data)
+
 if __name__ == "__main__":
     unittest.main()
+
