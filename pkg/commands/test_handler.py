@@ -33,5 +33,18 @@ class TestCommandHandler(unittest.TestCase):
         keys = self.handler.handle(["KEYS"])
         self.assertEqual(set(keys), {"k1", "k2"})
 
+    def test_list_commands(self):
+        self.assertEqual(self.handler.handle(["LPUSH", "mylist", "a", "b"]), 2)
+        self.assertEqual(self.handler.handle(["RPUSH", "mylist", "c"]), 3)
+        self.assertEqual(self.handler.handle(["LRANGE", "mylist", "0", "-1"]), ["b", "a", "c"])
+        self.assertEqual(self.handler.handle(["LPOP", "mylist"]), "b")
+        self.assertEqual(self.handler.handle(["RPOP", "mylist"]), "c")
+
+    def test_hash_commands(self):
+        self.assertEqual(self.handler.handle(["HSET", "myhash", "f1", "v1", "f2", "v2"]), 2)
+        self.assertEqual(self.handler.handle(["HGET", "myhash", "f1"]), "v1")
+        self.assertIsNone(self.handler.handle(["HGET", "myhash", "unknown"]))
+        self.assertEqual(self.handler.handle(["HDEL", "myhash", "f1"]), 1)
+
 if __name__ == "__main__":
     unittest.main()

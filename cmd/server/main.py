@@ -49,7 +49,7 @@ def handle_client(client_socket, client_address):
                     # Log successful write commands to AOF
                     if not isinstance(result, RESPError):
                         cmd_name = str(command_args[0]).upper()
-                        if cmd_name in ("SET", "DEL"):
+                        if cmd_name in ("SET", "DEL", "LPUSH", "RPUSH", "LPOP", "RPOP", "HSET", "HDEL"):
                             aof_manager.write(command_args)
                 except Exception as parse_error:
                     # Write protocol error back to the client
