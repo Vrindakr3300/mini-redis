@@ -128,6 +128,35 @@ python -m unittest discover -s pkg/
 
 ---
 
+## Lifecycle of a Request
+What happens under the hood when a client runs `SET name Vrinda`?
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Client as client.py
+    participant Server as cmd/server/main.py
+    participant Parser as pkg/resp/parser.py
+    participant Handler as pkg/commands/handler.py
+    participant DB as pkg/store/db.py
+    participant AOF as pkg/store/aof.py
+
+    User->>Client: Types "SET name Vrinda"
+    Client->>Server: Sends raw bytes over TCP socket
+    Server->>Parser: Passes raw bytes to parse
+    Parser-->>Server: Returns ["SET", "name", "Vrinda"]
+    Server->>Handler: Passes command list to execute
+    Handler->>DB: Calls db.set("name", "Vrinda")
+    DB-->>Handler: Returns True (Success)
+    Handler-->>Server: Returns "+OK" (RESP simple string)
+    Note over Server, AOF: If success and is a write command, log to disk
+    Server->>AOF: Writes ["SET", "name", "Vrinda"] to appendonly.aof
+    Server->>Client: Sends response bytes "+OK\r\n"
+    Client->>User: Prints "+OK"
+```
+
+---
+
 ## Technical Insights for SDE Interviews
 - **Custom RESP Parsing:** Instead of string splits, the stream parser reads chunks of bytes from a TCP socket into a buffer, handling partial reads and backtracking safely for nested array structures.
 - **Durability vs Performance:** AOF writes are unbuffered to disk on every command execution to ensure data safety, mirroring the traditional `appendfsync always` policy in Redis.
