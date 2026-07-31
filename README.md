@@ -4,7 +4,7 @@ A lightweight, high-performance in-memory key-value database clone of Redis, wri
 
 ![Mini-Redis Architecture](architecture.jpg)
 
-This project was solely built to understand systems programming, networking, custom protocol parsing, thread safety, and database durability.
+This project was built to understand systems programming, networking, custom protocol parsing, thread safety, and database durability.
 
 ---
 
