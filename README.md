@@ -1,5 +1,5 @@
 # Mini-Redis 🚀
-
+A lightweight, high-performance in-memory key-value database clone of Redis, written completely from scratch in Python. 
 
 ![Mini-Redis Architecture](architecture.jpg)
 
